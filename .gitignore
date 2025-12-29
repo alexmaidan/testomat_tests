@@ -1,0 +1,26 @@
+# Environment variables with secrets
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Test reports
+.pytest_cache/
+test-results/
+playwright-report/
+
+# IDE
+.idea/
+.venv
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+/.idea/

@@ -1,17 +1,89 @@
+import os
+
+import pytest
+from faker import Faker
 from playwright.sync_api import Page, expect
 
+from tests.conftest import Config
 
-def test_login_with_invalid_creds(page: Page):
-    page.goto("https://testomat.io")
+TARGET_PROJECT = "A Passage to India"
+
+
+@pytest.fixture(scope="function")
+def login(page: Page, configs: Config):
+    page.goto(configs.login_url)
+    login_user(page, configs.email, configs.password)
+
+
+def test_login_with_invalid_creds(page: Page, configs: Config):
+    open_homepage(page)
 
     expect(page.locator("[href*='sign_in'].login-item")).to_be_visible()
-
     page.get_by_text("Log in", exact=True).click()
 
-    page.locator("#content-desktop #user_email").fill("alex.maidan@gmail.com")
-    page.locator("#content-desktop #user_password").fill("pass")
-    page.get_by_role("button", name="Sign in").click()
+    invalid_password = Faker().password(length=10)
+    login_user(page, configs.email, invalid_password)
 
     expect(page.locator("#content-desktop").get_by_text("Invalid Email or password.")).to_be_visible()
     expect(page.locator("#content-desktop .common-flash-info")).to_have_text("Invalid Email or password.")
 
+
+def test_search_project_in_company(page: Page, login):
+    search_for_project(page, TARGET_PROJECT)
+
+    expect(page.get_by_role("heading", name=TARGET_PROJECT)).to_be_visible()
+
+
+def test_should_be_possible_to_open_free_project(page: Page, login):
+    page.locator("#company_id").click()
+    page.locator("#company_id").select_option("Free Projects")
+    search_for_project(page, TARGET_PROJECT)
+    expect(page.get_by_role("heading", name=TARGET_PROJECT)).to_be_hidden()
+    expect(page.get_by_text("You have not created any projects yet")).to_be_visible(timeout=10000)
+
+
+def test_open_support_chat(page: Page):
+    open_homepage(page)
+
+    page.locator("h1").click()
+    page.get_by_role("button", name="Open chat").click()
+
+    expect(page.locator("#crisp-chatbox-chat").get_by_text("How can we help you with testomat.io?")).to_be_visible()
+
+
+def test_hover_features_menu(page: Page):
+    open_homepage(page)
+
+    page.get_by_role("link", name="Features", exact=True).hover()
+
+    expect(page.get_by_text("Explore features")).to_be_visible()
+
+
+def test_social_media_links(page: Page):
+    open_homepage(page)
+
+    with page.context.expect_page() as new_page_info:
+        page.locator(".socials > a").first.click()
+    new_page = new_page_info.value
+    expect(new_page).to_have_url("https://x.com/testomatio")
+
+
+# Helper functions
+
+def search_for_project(page: Page, target_project: str):
+    expect(page.get_by_role("searchbox", name="Search")).to_be_visible()
+    page.locator("#content-desktop #search").fill(target_project)
+
+
+def open_homepage(page: Page):
+    page.goto(os.getenv("BASE_URL"))
+
+
+def open_login_page(page: Page):
+    page.goto(f"{os.getenv("APP_URL")}/users/sign_in")
+
+
+def login_user(page: Page, email: str, password: str):
+    page.locator("#content-desktop #user_email").fill(email)
+    page.locator("#content-desktop #user_password").fill(password)
+    page.get_by_role("button", name="Sign in").click()
