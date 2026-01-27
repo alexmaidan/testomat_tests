@@ -2,8 +2,8 @@ import os
 
 import pytest
 from faker import Faker
-from playwright.sync_api import Page, expect
 
+from playwright.sync_api import Page, expect
 from tests.conftest import Config
 
 TARGET_PROJECT = "A Passage to India"
