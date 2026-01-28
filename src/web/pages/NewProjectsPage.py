@@ -1,5 +1,7 @@
+from typing import Self
+
 from playwright.sync_api import Page, expect
-from typing_extensions import Self
+
 from src.web.pages.ProjectPage import ProjectPage
 
 

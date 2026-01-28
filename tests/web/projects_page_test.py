@@ -1,30 +1,27 @@
+
 import re
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import expect
 
-from src.web.pages.HomePage import HomePage
-from src.web.pages.LoginPage import LoginPage
+from src.web.Application import Application
 from src.web.pages.ProjectsPage import ProjectsPage
 from tests.conftest import Config
 
 
 @pytest.fixture
-def logged_in_projects_page(page: Page, configs: Config) -> ProjectsPage:
-    home_page = HomePage(page)
-    home_page.open()
-    home_page.is_loaded()
-    home_page.click_login()
+def logged_in_projects_page(app: Application, configs: Config) -> ProjectsPage:
+    app.home_page.open()
+    app.home_page.is_loaded()
+    app.home_page.click_login()
 
-    login_page = LoginPage(page)
-    login_page.is_loaded()
-    login_page.login(configs.email, configs.password)
+    app.login_page.is_loaded()
+    app.login_page.login(configs.email, configs.password)
 
-    projects_page = ProjectsPage(page)
-    projects_page.is_loaded()
-    assert projects_page.get_selected_company() == "QA Club Lviv"
-    projects_page.has_plan_badge("Enterprise plan")
-    return projects_page
+    app.projects_page.is_loaded()
+    assert app.projects_page.get_selected_company() == "QA Club Lviv"
+    app.projects_page.has_plan_badge("Enterprise plan")
+    return app.projects_page
 
 
 class TestProjectsPageLoaded:
