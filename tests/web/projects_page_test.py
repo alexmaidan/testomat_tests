@@ -1,4 +1,3 @@
-
 import re
 
 import pytest
@@ -34,8 +33,6 @@ class TestProjectsPageLoaded:
 
     def test_projects_page_displays_plan_badge(self, logged_in_projects_page: ProjectsPage):
         logged_in_projects_page.has_plan_badge("plan")
-
-
 
 
 class TestProjectsSearch:
