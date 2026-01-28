@@ -15,3 +15,8 @@ def test_new_project_creation(app: Application, login):
      .is_loaded()
      .empty_project_name_is(target_project_name)
      .close_read_me())
+
+    (app.project_page.sidebar
+     .is_loaded()
+     .expand()
+     .is_tab_active("Tests"))
