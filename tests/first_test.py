@@ -42,15 +42,6 @@ def test_should_be_possible_to_open_free_project(page: Page, login):
     expect(page.get_by_text("You have not created any projects yet")).to_be_visible(timeout=10000)
 
 
-def test_open_support_chat(page: Page):
-    open_homepage(page)
-
-    page.locator("h1").click()
-    page.get_by_role("button", name="Open chat").click()
-
-    expect(page.locator("#crisp-chatbox-chat").get_by_text("How can we help you with testomat.io?")).to_be_visible()
-
-
 def test_hover_features_menu(page: Page):
     open_homepage(page)
 

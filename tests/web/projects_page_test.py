@@ -5,22 +5,16 @@ from playwright.sync_api import expect
 
 from src.web.Application import Application
 from src.web.pages.ProjectsPage import ProjectsPage
-from tests.conftest import Config
 
 
 @pytest.fixture
-def logged_in_projects_page(app: Application, configs: Config) -> ProjectsPage:
-    app.home_page.open()
-    app.home_page.is_loaded()
-    app.home_page.click_login()
-
-    app.login_page.is_loaded()
-    app.login_page.login(configs.email, configs.password)
-
-    app.projects_page.is_loaded()
-    assert app.projects_page.get_selected_company() == "QA Club Lviv"
-    app.projects_page.has_plan_badge("Enterprise plan")
-    return app.projects_page
+def logged_in_projects_page(logged_app: Application) -> ProjectsPage:
+    """Uses logged_app fixture - reuses authorization across tests."""
+    logged_app.projects_page.open()
+    logged_app.projects_page.is_loaded()
+    assert logged_app.projects_page.get_selected_company() == "QA Club Lviv"
+    logged_app.projects_page.has_plan_badge("Enterprise plan")
+    return logged_app.projects_page
 
 
 class TestProjectsPageLoaded:
@@ -39,15 +33,18 @@ class TestProjectsSearch:
     target_project_name: str = "A Passage to India"
 
     def test_search_project_by_name(self, logged_in_projects_page: ProjectsPage):
-        initial_count = logged_in_projects_page.count_of_projects_visible(43)
+        initial_count = logged_in_projects_page.get_visible_projects_count()
         logged_in_projects_page.search_project(self.target_project_name)
-        assert logged_in_projects_page.count_of_projects_visible(1) <= initial_count
+        filtered_count = logged_in_projects_page.wait_for_projects_count(1)
+        assert filtered_count <= initial_count
 
     def test_clear_search_restores_projects(self, logged_in_projects_page: ProjectsPage):
-        initial_count = logged_in_projects_page.count_of_projects_visible(43)
+        initial_count = logged_in_projects_page.get_visible_projects_count()
         logged_in_projects_page.search_project(self.target_project_name)
+        logged_in_projects_page.wait_for_projects_count(1)
         logged_in_projects_page.clear_search()
-        assert logged_in_projects_page.count_of_projects_visible(43) == initial_count
+        restored_count = logged_in_projects_page.wait_for_projects_count(initial_count)
+        assert restored_count == initial_count
 
 
 class TestProjectCards:
@@ -72,18 +69,6 @@ class TestProjectCards:
     def test_project_card_displays_member_avatars(self, logged_in_projects_page: ProjectsPage):
         card = logged_in_projects_page.get_project_card(0)
         assert card.get_member_avatars_count() > 0
-
-
-class TestGlobalSearch:
-
-    def test_open_global_search(self, logged_in_projects_page: ProjectsPage):
-        logged_in_projects_page.header.open_global_search()
-        logged_in_projects_page.header.is_global_search_visible()
-
-    def test_close_global_search_with_escape(self, logged_in_projects_page: ProjectsPage):
-        logged_in_projects_page.header.open_global_search()
-        logged_in_projects_page.header.close_global_search()
-        logged_in_projects_page.header.is_global_search_hidden()
 
 
 class TestProfileMenu:

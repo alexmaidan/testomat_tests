@@ -55,6 +55,16 @@ class ProjectsPage:
     def switch_to_table_view(self) -> None:
         self._table_view_button.click()
 
+    def get_visible_projects_count(self) -> int:
+        """Returns the current count of visible project cards."""
+        return self._project_cards.locator("visible=true").count()
+
+    def wait_for_projects_count(self, expected_count: int) -> int:
+        """Waits for a specific number of visible projects and returns the count."""
+        visible_cards = self._project_cards.locator("visible=true")
+        expect(visible_cards).to_have_count(expected_count)
+        return visible_cards.count()
+
     def count_of_projects_visible(self, expected_count: int) -> int:
         visible_cards = self._project_cards.locator("visible=true")
         expect(visible_cards).to_have_count(expected_count)
