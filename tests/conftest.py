@@ -1,6 +1,6 @@
 import os
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Generator
 
 import pytest
 from dotenv import load_dotenv
@@ -33,14 +33,15 @@ def configs():
 # BROWSER & CONTEXT FIXTURES
 # =============================================================================
 
+
 @pytest.fixture(scope="session")
-def playwright_instance() -> Generator[Playwright, None, None]:
+def playwright_instance() -> Generator[Playwright]:
     with sync_playwright() as p:
         yield p
 
 
 @pytest.fixture(scope="session")
-def browser(playwright_instance: Playwright) -> Generator[Browser, None, None]:
+def browser(playwright_instance: Playwright) -> Generator[Browser]:
     browser = playwright_instance.chromium.launch(
         headless=False,
         slow_mo=150,
@@ -66,15 +67,16 @@ def context_args() -> dict:
 # 1. CLEAN APP - new page for each test (function scope)
 # =============================================================================
 
+
 @pytest.fixture(scope="function")
-def context(browser: Browser, context_args: dict) -> Generator[BrowserContext, None, None]:
+def context(browser: Browser, context_args: dict) -> Generator[BrowserContext]:
     ctx = browser.new_context(**context_args)
     yield ctx
     ctx.close()
 
 
 @pytest.fixture(scope="function")
-def page(context: BrowserContext) -> Generator[Page, None, None]:
+def page(context: BrowserContext) -> Generator[Page]:
     pg = context.new_page()
     yield pg
     pg.close()
@@ -90,8 +92,9 @@ def app(page: Page) -> Application:
 # 2. LOGGED APP - reuses authorization across tests
 # =============================================================================
 
+
 @pytest.fixture(scope="session")
-def logged_context(browser: Browser, context_args: dict, configs: Config) -> Generator[BrowserContext, None, None]:
+def logged_context(browser: Browser, context_args: dict, configs: Config) -> Generator[BrowserContext]:
     """Session-scoped context with saved login state."""
     ctx = browser.new_context(**context_args)
     pg = ctx.new_page()
@@ -110,7 +113,7 @@ def logged_context(browser: Browser, context_args: dict, configs: Config) -> Gen
 
 
 @pytest.fixture(scope="function")
-def logged_page(logged_context: BrowserContext) -> Generator[Page, None, None]:
+def logged_page(logged_context: BrowserContext) -> Generator[Page]:
     """New page in logged context - shares auth cookies."""
     pg = logged_context.new_page()
     yield pg
@@ -127,8 +130,9 @@ def logged_app(logged_page: Page) -> Application:
 # 3. REUSED CONTEXT - for parametrized tests (e.g., invalid login)
 # =============================================================================
 
+
 @pytest.fixture(scope="module")
-def reused_context(browser: Browser, context_args: dict) -> Generator[BrowserContext, None, None]:
+def reused_context(browser: Browser, context_args: dict) -> Generator[BrowserContext]:
     """Module-scoped context - reused across parametrized tests."""
     ctx = browser.new_context(**context_args)
     yield ctx
@@ -136,7 +140,7 @@ def reused_context(browser: Browser, context_args: dict) -> Generator[BrowserCon
 
 
 @pytest.fixture(scope="function")
-def reused_page(reused_context: BrowserContext) -> Generator[Page, None, None]:
+def reused_page(reused_context: BrowserContext) -> Generator[Page]:
     """New page in reused context - faster for parametrized tests."""
     pg = reused_context.new_page()
     yield pg
@@ -153,8 +157,9 @@ def reused_app(reused_page: Page) -> Application:
 # 4. PERSISTENT LOGIN PAGE - same page for all parametrized login tests
 # =============================================================================
 
+
 @pytest.fixture(scope="module")
-def persistent_login_page(reused_context: BrowserContext) -> Generator[Page, None, None]:
+def persistent_login_page(reused_context: BrowserContext) -> Generator[Page]:
     """Module-scoped page - keeps the same page for all tests in module."""
     pg = reused_context.new_page()
     yield pg
@@ -176,6 +181,7 @@ def persistent_login_app(persistent_login_page: Page) -> Application:
 # =============================================================================
 # CLEANUP UTILITIES
 # =============================================================================
+
 
 def clear_browser_data(context: BrowserContext, page: Page = None) -> None:
     """
@@ -218,7 +224,7 @@ def clear_all_storage(page: Page) -> None:
 
 
 @pytest.fixture(scope="function")
-def clean_page(page: Page) -> Generator[Page, None, None]:
+def clean_page(page: Page) -> Generator[Page]:
     """Page fixture that clears all storage before and after test."""
     clear_all_storage(page)
     yield page
@@ -229,4 +235,3 @@ def clean_page(page: Page) -> Generator[Page, None, None]:
 def clean_app(clean_page: Page) -> Application:
     """App instance with cleared storage - ensures clean state."""
     return Application(clean_page)
-
