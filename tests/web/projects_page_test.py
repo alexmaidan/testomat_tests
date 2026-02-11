@@ -5,7 +5,7 @@ from playwright.sync_api import expect
 
 from src.web.application import Application
 from src.web.pages.projects_page import ProjectsPage
-from tests.data.test_data import TestProjects, TestCompanies, TestPlans
+from tests.data.test_data import TestCompanies, TestPlans, TestProjects
 
 
 @pytest.fixture

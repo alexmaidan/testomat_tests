@@ -1,0 +1,179 @@
+# UV project configuration for testomat_tests
+# https://docs.astral.sh/uv/
+
+[project]
+name = "testomat-tests"
+version = "0.1.0"
+description = "Testomat test automation project using Playwright"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "certifi>=2025.11.12",
+    "charset-normalizer>=3.4.4",
+    "colorama>=0.4.6",
+    "faker>=39.0.0",
+    "greenlet>=3.3.0",
+    "idna>=3.11",
+    "iniconfig>=2.3.0",
+    "packaging>=25.0",
+    "playwright>=1.57.0",
+    "pluggy>=1.6.0",
+    "pyee>=13.0.0",
+    "pygments>=2.19.2",
+    "pytest>=9.0.2",
+    "pytest-base-url>=2.1.0",
+    "pytest-html>=4.2.0",
+    "pytest-playwright>=0.7.2",
+    "python-dotenv>=1.2.1",
+    "python-slugify>=8.0.4",
+    "requests>=2.32.5",
+    "text-unidecode>=1.3",
+    "typing-extensions>=4.15.0",
+    "urllib3>=2.6.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.uv]
+dev-dependencies = [
+    "ruff>=0.8.0",
+]
+
+# =============================================================================
+# PYTEST CONFIGURATION
+# =============================================================================
+[tool.pytest.ini_options]
+# Requires pytest version 8.0 or higher; fails if an older version is used
+minversion = "8.0"
+
+# Specifies the directory where pytest looks for tests (the tests/ folder)
+testpaths = ["tests"]
+
+# Defines filename patterns for test file discovery
+# Files starting with test_ or ending with _test.py or _tests.py
+python_files = ["test_*.py", "*_test.py", "*_tests.py"]
+
+# Defines function naming pattern - only functions starting with test_ are collected as tests
+python_functions = ["test_*"]
+
+# Directories to skip during test collection to speed up discovery
+norecursedirs = [".git", ".venv", ".claude", ".idea", "__pycache__", "build", "dist"]
+
+# Default command-line options applied to every pytest run
+addopts = [
+    "--headed",
+    "-v",
+    "-ra",
+    "--strict-markers",
+    "--tb=short",
+    "--html=test-result/report.html",
+    "--self-contained-html",
+    "--screenshot=only-on-failure",
+    "--tracing=retain-on-failure",
+    "--output=test-result/traces",
+]
+
+# Registers custom markers to categorize tests
+markers = [
+    "smoke: Quick smoke tests for basic functionality",
+    "regression: Full regression test suite",
+    "web: Web UI tests using Playwright",
+    "slow: Tests that take longer to execute",
+]
+
+# Shows progress bar/dots during test run instead of verbose list
+console_output_style = "progress"
+
+# Enables live logging to console during test execution
+log_cli = true
+
+# Minimum log level to display (INFO and above)
+log_cli_level = "INFO"
+
+# Log message format with timestamp and level
+log_cli_format = "%(asctime)s [%(levelname)s] %(message)s"
+
+# Date/time format for log timestamps
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+# If a test marked @pytest.mark.xfail unexpectedly passes, it fails the suite (prevents stale xfails)
+xfail_strict = true
+
+# =============================================================================
+# RUFF CONFIGURATION
+# =============================================================================
+[tool.ruff]
+# Target Python version
+target-version = "py314"
+
+# Line length to match common standards
+line-length = 120
+
+# Exclude common directories
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "*.pyc",
+    ".pytest_cache",
+    "test-result",
+    "videos",
+]
+
+[tool.ruff.lint]
+# Enable recommended rules
+select = [
+    "E", # pycodestyle errors
+    "W", # pycodestyle warnings
+    "F", # Pyflakes
+    "I", # isort
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "SIM", # flake8-simplify
+    "RUF", # Ruff-specific rules
+]
+
+# Ignore specific rules
+ignore = [
+    "E501", # line too long (handled by formatter)
+    "B008", # do not perform function calls in argument defaults
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can have more relaxed rules
+"tests/**/*.py" = [
+    "S101", # allow assert in tests
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "tests"]
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Indent with spaces
+indent-style = "space"
+
+# Respect magic trailing commas
+skip-magic-trailing-comma = false
+
+# Unix-style line endings
+line-ending = "auto"
+
+

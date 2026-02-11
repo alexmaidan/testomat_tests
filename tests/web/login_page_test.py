@@ -7,7 +7,6 @@ from src.web.application import Application
 from src.web.constants import Timeouts
 from tests.conftest import Config
 
-
 # =============================================================================
 # TEST DESIGN TECHNIQUES:
 # 1. Equivalence Class Partitioning (ECP) - divides input into valid/invalid classes

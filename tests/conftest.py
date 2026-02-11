@@ -4,7 +4,7 @@ from typing import Generator
 
 import pytest
 from dotenv import load_dotenv
-from playwright.sync_api import Page, Browser, BrowserContext, Playwright, sync_playwright
+from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_playwright
 
 from src.web.application import Application
 
