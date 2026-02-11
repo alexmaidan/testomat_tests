@@ -7,15 +7,16 @@ Automated test suite for Testomat using Playwright and pytest.
 ```
 testomat_tests/
 ├── src/                    # Source code
-│   ├── core/               # Base classes
-│   ├── utils/              # Helper utilities
+│   ├── core/               # Base classes (BasePage, BaseComponent)
+│   ├── utils/              # Helper utilities (Faker-based generators)
 │   └── web/                # Web automation
-│       ├── components/     # UI components
-│       └── pages/          # Page objects
+│       ├── components/     # UI components (ProjectCard, SideBar, etc.)
+│       └── pages/          # Page objects (HomePage, LoginPage, etc.)
 ├── tests/                  # Test suites
 │   ├── data/               # Test data
 │   └── web/                # Web UI tests
-└── test-result/            # Test reports
+├── test-result/            # Test reports (HTML reports, traces)
+└── videos/                 # Video recordings of test runs
 ```
 
 ## Setup
@@ -52,8 +53,13 @@ uv run pytest
 uv run pytest tests/web/login_page_test.py
 
 # Run tests with markers
-uv run pytest -m smoke
-uv run pytest -m regression
+uv run pytest -m smoke       # Quick smoke tests
+uv run pytest -m regression  # Full regression suite
+uv run pytest -m web         # Web UI tests
+uv run pytest -m slow        # Tests that take longer to execute
+
+# Run in headless mode (override default)
+uv run pytest --headless
 ```
 
 ## Development
@@ -69,6 +75,16 @@ uv run ruff format .
 
 - `pyproject.toml` - Project configuration, dependencies, pytest and ruff settings
 - `example.env` - Environment variables template
+
+## Features
+
+- **Page Object Pattern** - Clean separation between test logic and UI interactions
+- **Playwright Integration** - Modern browser automation with pytest-playwright
+- **Video Recording** - Automatic video capture of test runs (saved to `videos/`)
+- **Tracing** - Playwright traces retained on failures for debugging
+- **HTML Reports** - Self-contained test reports generated in `test-result/`
+- **Screenshots** - Automatic screenshots on test failures
+- **Faker Integration** - Random test data generation for dynamic testing
 
 ## Environment Variables
 
