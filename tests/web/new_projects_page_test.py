@@ -1,11 +1,15 @@
-from faker import Faker
+"""Tests for new project page functionality."""
 
-from src.web.Application import Application
+from src.utils.helpers import generate_project_name
+from src.web.application import Application
 
 
-def test_new_project_creation(logged_app: Application):
-    """Uses logged_app fixture - reuses authorization."""
-    target_project_name = Faker().company()
+def test_create_new_project_basic(logged_app: Application):
+    """Test basic project creation flow.
+
+    Uses logged_app fixture - reuses authorization.
+    """
+    target_project_name = generate_project_name()
     (logged_app.new_projects_page
      .open()
      .is_loaded()
@@ -14,5 +18,5 @@ def test_new_project_creation(logged_app: Application):
 
     (logged_app.project_page
      .is_loaded()
-     .empty_project_name_is(target_project_name)
+     .assert_project_name(target_project_name)
      .close_read_me())

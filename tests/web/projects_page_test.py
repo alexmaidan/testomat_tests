@@ -3,8 +3,9 @@ import re
 import pytest
 from playwright.sync_api import expect
 
-from src.web.Application import Application
-from src.web.pages.ProjectsPage import ProjectsPage
+from src.web.application import Application
+from src.web.pages.projects_page import ProjectsPage
+from tests.data.test_data import TestProjects, TestCompanies, TestPlans
 
 
 @pytest.fixture
@@ -12,8 +13,8 @@ def logged_in_projects_page(logged_app: Application) -> ProjectsPage:
     """Uses logged_app fixture - reuses authorization across tests."""
     logged_app.projects_page.open()
     logged_app.projects_page.is_loaded()
-    assert logged_app.projects_page.get_selected_company() == "QA Club Lviv"
-    logged_app.projects_page.has_plan_badge("Enterprise plan")
+    assert logged_app.projects_page.get_selected_company() == TestCompanies.DEFAULT_COMPANY
+    logged_app.projects_page.has_plan_badge(TestPlans.ENTERPRISE)
     return logged_app.projects_page
 
 
@@ -30,17 +31,17 @@ class TestProjectsPageLoaded:
 
 
 class TestProjectsSearch:
-    target_project_name: str = "A Passage to India"
+    """Tests for project search functionality."""
 
     def test_search_project_by_name(self, logged_in_projects_page: ProjectsPage):
         initial_count = logged_in_projects_page.get_visible_projects_count()
-        logged_in_projects_page.search_project(self.target_project_name)
+        logged_in_projects_page.search_project(TestProjects.TARGET_PROJECT)
         filtered_count = logged_in_projects_page.wait_for_projects_count(1)
         assert filtered_count <= initial_count
 
     def test_clear_search_restores_projects(self, logged_in_projects_page: ProjectsPage):
         initial_count = logged_in_projects_page.get_visible_projects_count()
-        logged_in_projects_page.search_project(self.target_project_name)
+        logged_in_projects_page.search_project(TestProjects.TARGET_PROJECT)
         logged_in_projects_page.wait_for_projects_count(1)
         logged_in_projects_page.clear_search()
         restored_count = logged_in_projects_page.wait_for_projects_count(initial_count)

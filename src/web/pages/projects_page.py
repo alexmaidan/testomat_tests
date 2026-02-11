@@ -1,15 +1,25 @@
+from typing import Self
+
 from playwright.sync_api import Page, expect
 
-from src.web.components.ProjectCard import ProjectCard
-from src.web.components.ProjectsPageHeader import ProjectsPageHeader
+from src.core.base_page import BasePage
+from src.web.components.project_card import ProjectCard
+from src.web.components.projects_page_header import ProjectsPageHeader
+from src.web.constants import Urls
 
 
-class ProjectsPage:
+class ProjectsPage(BasePage):
+    """Projects page object displaying list of user projects."""
 
-    URL = "/"
+    URL = Urls.PROJECTS
 
     def __init__(self, page: Page):
-        self.page = page
+        """Initialize ProjectsPage with page locators.
+
+        Args:
+            page: Playwright Page instance
+        """
+        super().__init__(page)
         self.header = ProjectsPageHeader(page)
 
         self._page_header = page.locator(".common-page-header")
@@ -25,13 +35,15 @@ class ProjectsPage:
         self._projects_grid = page.locator("#grid ul.grid")
         self._project_cards = page.locator("#grid ul.grid > li")
 
-    def open(self) -> "ProjectsPage":
-        self.page.goto(self.URL)
-        return self
+    def is_loaded(self) -> Self:
+        """Assert that the projects page is fully loaded.
 
-    def is_loaded(self) -> None:
+        Returns:
+            Self for method chaining
+        """
         expect(self._page_title).to_have_text("Projects")
         expect(self._projects_grid).to_be_visible()
+        return self
 
 
     def select_company(self, company_name: str) -> None:
