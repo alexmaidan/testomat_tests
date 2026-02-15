@@ -80,11 +80,58 @@ uv run ruff format .
 
 - **Page Object Pattern** - Clean separation between test logic and UI interactions
 - **Playwright Integration** - Modern browser automation with pytest-playwright
+- **Cookie-Based Session Caching** - Skip login on subsequent test runs using cached cookies
 - **Video Recording** - Automatic video capture of test runs (saved to `videos/`)
 - **Tracing** - Playwright traces retained on failures for debugging
 - **HTML Reports** - Self-contained test reports generated in `test-result/`
 - **Screenshots** - Automatic screenshots on test failures
 - **Faker Integration** - Random test data generation for dynamic testing
+
+## Cookie-Based Session Optimization
+
+The test suite includes cookie-based authentication caching for faster test execution:
+
+### How It Works
+
+1. **First Run**: Performs full login and saves session state to `test-result/.auth/storage_state.json`
+2. **Subsequent Runs**: Restores session from cached cookies, skipping login if session is valid
+3. **Auto-Refresh**: If cached session is invalid/expired, automatically performs fresh login
+
+### Available Fixtures
+
+| Fixture           | Scope    | Description                               |
+|-------------------|----------|-------------------------------------------|
+| `logged_app`      | function | Pre-authenticated app with cookie caching |
+| `logged_context`  | session  | Browser context with saved auth state     |
+| `quick_login_app` | function | Isolated page with cookie-based login     |
+| `cookies`         | function | CookieHelper for managing cookies         |
+
+### Usage Example
+
+```python
+# Uses cached cookies - no login needed if session is valid
+def test_projects_page(logged_app: Application):
+    logged_app.projects_page.open()
+    logged_app.projects_page.is_loaded()
+
+
+# Cookie manipulation
+def test_with_feature_flag(logged_app: Application, cookies: CookieHelper):
+    cookies.add("feature_flag", "enabled", "app.testomat.io")
+    logged_app.page.reload()
+```
+
+### Cookie Helper Methods
+
+```python
+cookies.add(name, value, domain)  # Add a cookie
+cookies.exists(name)  # Check if cookie exists
+cookies.get_value(name)  # Get cookie value
+cookies.clear(name=None)  # Clear specific or all cookies
+cookies.is_session_valid()  # Check if session cookies are valid
+cookies.get_auth_cookies()  # Get authentication-related cookies
+cookies.save_storage_state(path)  # Save full browser state
+```
 
 ## Environment Variables
 

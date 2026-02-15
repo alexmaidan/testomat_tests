@@ -1,6 +1,7 @@
 """Cookie helper utilities for Playwright tests."""
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -164,6 +165,76 @@ def is_authenticated(context: BrowserContext, auth_cookie_name: str = "session")
     return has_cookie(context, auth_cookie_name)
 
 
+def is_session_cookie_valid(
+    context: BrowserContext, session_cookie_names: list[str] | None = None, expiry_buffer_seconds: int = 300
+) -> bool:
+    """
+    Check if session cookies exist and haven't expired.
+
+    This is useful for determining if cached cookies can be reused
+    to skip login procedures.
+
+    Args:
+        context: BrowserContext to check
+        session_cookie_names: List of cookie names to check. If None, checks for
+                            common session cookie patterns (_session, remember_token, etc.)
+        expiry_buffer_seconds: Consider cookie invalid if it expires within this many
+                              seconds (default: 300 = 5 minutes)
+
+    Returns:
+        True if at least one valid session cookie exists, False otherwise
+    """
+    if session_cookie_names is None:
+        # Common session cookie names for Rails/web apps
+        session_cookie_names = [
+            "_session_id",
+            "_testomat_session",
+            "remember_token",
+            "_session",
+            "session",
+        ]
+
+    cookies = context.cookies()
+    current_time = time.time()
+
+    for cookie in cookies:
+        name = cookie.get("name", "")
+        # Check if this looks like a session cookie
+        is_session_cookie = (
+            any(sess_name in name.lower() for sess_name in session_cookie_names) or "session" in name.lower()
+        )
+
+        if is_session_cookie:
+            # Check expiration if present
+            expires = cookie.get("expires", -1)
+            if expires == -1:
+                # Session cookie (no expiry) - valid while browser is open
+                return True
+            if expires > current_time + expiry_buffer_seconds:
+                # Cookie hasn't expired and won't expire soon
+                return True
+
+    return False
+
+
+def get_auth_cookies(context: BrowserContext) -> list[Cookie]:
+    """
+    Get all authentication-related cookies from the browser context.
+
+    Useful for debugging session issues or saving auth state.
+
+    Args:
+        context: BrowserContext to get cookies from
+
+    Returns:
+        List of cookies that appear to be authentication-related
+    """
+    auth_patterns = ["session", "token", "auth", "remember", "user"]
+    cookies = context.cookies()
+
+    return [cookie for cookie in cookies if any(pattern in cookie.get("name", "").lower() for pattern in auth_patterns)]
+
+
 class CookieHelper:
     """Helper class for managing cookies in Playwright browser context."""
 
@@ -239,3 +310,58 @@ class CookieHelper:
             List of all cookies
         """
         return get_cookies(self._context)
+
+    def save_to_file(self, file_path: str | Path) -> None:
+        """
+        Save all cookies to a JSON file.
+
+        Useful for persisting session state between test runs.
+
+        Args:
+            file_path: Path to save the cookies JSON file
+        """
+        save_cookies_to_file(self._context, file_path)
+
+    def load_from_file(self, file_path: str | Path) -> None:
+        """
+        Load cookies from a JSON file.
+
+        Useful for restoring session state from a previous run.
+
+        Args:
+            file_path: Path to the cookies JSON file
+        """
+        load_cookies_from_file(self._context, file_path)
+
+    def save_storage_state(self, file_path: str | Path) -> None:
+        """
+        Save full storage state (cookies + localStorage) to a file.
+
+        This is the recommended way to persist authentication state
+        as it includes all browser storage, not just cookies.
+
+        Args:
+            file_path: Path to save the storage state JSON file
+        """
+        save_storage_state(self._context, file_path)
+
+    def is_session_valid(self, session_cookie_names: list[str] | None = None) -> bool:
+        """
+        Check if the current session cookies are valid.
+
+        Args:
+            session_cookie_names: Optional list of session cookie names to check
+
+        Returns:
+            True if at least one valid session cookie exists
+        """
+        return is_session_cookie_valid(self._context, session_cookie_names)
+
+    def get_auth_cookies(self) -> list[Cookie]:
+        """
+        Get all authentication-related cookies.
+
+        Returns:
+            List of cookies that appear to be authentication-related
+        """
+        return get_auth_cookies(self._context)
