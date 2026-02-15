@@ -9,8 +9,8 @@ from playwright.sync_api import Page, expect
 
 from src.utils.helpers import generate_random_password
 from src.web.application import Application
-from tests.conftest import Config
 from tests.data.test_data import TestCompanies, TestProjects
+from tests.fixtures.config import Config
 
 
 @pytest.fixture(scope="function")

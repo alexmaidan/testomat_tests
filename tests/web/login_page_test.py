@@ -5,7 +5,7 @@ import pytest
 from src.utils.helpers import generate_random_email, generate_random_password
 from src.web.application import Application
 from src.web.constants import Timeouts
-from tests.conftest import Config
+from tests.fixtures.config import Config
 
 # =============================================================================
 # TEST DESIGN TECHNIQUES:
@@ -28,16 +28,13 @@ invalid_login_test_data = [
     pytest.param("user name@domain.com", generate_random_password(), id="EC_email_with_space"),
     pytest.param(" user@domain.com", generate_random_password(), id="EC_email_leading_space"),
     pytest.param("user@domain.com ", generate_random_password(), id="EC_email_trailing_space"),
-
     # --- Equivalence Class Partitioning: Password ---
     pytest.param(generate_random_email(), "", id="EC_empty_password"),
     pytest.param(generate_random_email(), "        ", id="EC_password_only_spaces"),
-
     # --- Boundary Value Analysis: Email ---
     pytest.param("a@b.co", generate_random_password(), id="BVA_email_min_length"),
     pytest.param(f"{'a' * 64}@{'b' * 185}.com", generate_random_password(), id="BVA_email_max_255"),
     pytest.param(f"{'a' * 100}@{'b' * 200}.com", generate_random_password(), id="BVA_email_exceeds_max"),
-
     # --- Boundary Value Analysis: Password ---
     pytest.param(generate_random_email(), "a", id="BVA_password_1_char"),
     pytest.param(generate_random_email(), "abc45", id="BVA_password_5_chars"),
@@ -47,10 +44,8 @@ invalid_login_test_data = [
     pytest.param(generate_random_email(), "abcdefgh9", id="BVA_password_9_chars"),
     pytest.param(generate_random_email(), generate_random_password(100), id="BVA_password_100_chars"),
     pytest.param(generate_random_email(), generate_random_password(255), id="BVA_password_255_chars"),
-
     # --- Wrong credentials (valid format, non-existent user) ---
     pytest.param(generate_random_email(), generate_random_password(), id="EC_nonexistent_user"),
-
     # --- Security: XSS and SQL Injection ---
     pytest.param(generate_random_email(), "<script>alert('XSS')</script>", id="SEC_xss_in_password"),
     pytest.param(generate_random_email(), "' OR '1'='1", id="SEC_sql_injection_password"),
@@ -69,7 +64,6 @@ def test_login_invalid(persistent_login_app: Application, email: str, password: 
     persistent_login_app.login_page.login_user(email, password)
     persistent_login_app.login_page.has_invalid_login_message()
     persistent_login_app.login_page.wait_for_timeout(Timeouts.SHORT)  # Wait briefly to ensure no navigation occurs
-
 
 
 @pytest.mark.smoke

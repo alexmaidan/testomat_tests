@@ -57,6 +57,8 @@ class NewProjectsPage(BasePage):
         Returns:
             ProjectPage instance for the newly created project
         """
-        self._form_container.locator("#project-create-btn input").click()
-        expect(self._form_container.locator("#project-create-btn input")).to_be_hidden(timeout=10_000)
+        create_btn = self._form_container.locator("#project-create-btn input")
+        # Submit form without target to prevent new tab
+        self._form_container.evaluate("form => { form.removeAttribute('target'); form.submit(); }")
+        self.page.wait_for_load_state()
         return ProjectPage(self.page)

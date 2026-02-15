@@ -45,7 +45,6 @@ class ProjectsPage(BasePage):
         expect(self._projects_grid).to_be_visible()
         return self
 
-
     def select_company(self, company_name: str) -> None:
         self._company_select.select_option(label=company_name)
 
@@ -59,7 +58,14 @@ class ProjectsPage(BasePage):
         self._search_input.clear()
 
     def click_create_project(self) -> None:
+        # Override window.open to navigate in same tab instead of opening new tab
+        self.page.evaluate(
+            """() => {
+                window.open = (url) => { window.location.href = url; };
+            }"""
+        )
         self._create_button.click()
+        self.page.wait_for_load_state()
 
     def switch_to_grid_view(self) -> None:
         self._grid_view_button.click()
