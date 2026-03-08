@@ -26,6 +26,8 @@ class ProjectsPage(BasePage):
         self._page_title = page.locator(".common-page-header h2")
         self._company_select = page.locator("#company_id")
         self._plan_tooltip = page.locator(".tooltip-project-plan")
+        self._enterprise_plan_label = page.get_by_text("Enterprise Plan")
+        self._free_plan_label = page.get_by_text("Free Plan")
 
         self._search_input = page.locator(".common-page-header input#search")
         self._create_button = page.locator(".common-page-header a.common-btn-primary")

@@ -17,4 +17,3 @@ class Timeouts:
     MEDIUM = 5000
     LONG = 10000
     PAGE_LOAD = 30000
-
