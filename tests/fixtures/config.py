@@ -15,6 +15,7 @@ class Config:
     login_url: str
     email: str
     password: str
+    api_token: str
 
 
 @pytest.fixture(scope="session")
@@ -25,4 +26,5 @@ def configs():
         login_url=os.getenv("APP_URL"),
         email=os.getenv("EMAIL"),
         password=os.getenv("PASSWORD"),
+        api_token=os.getenv("TESTOMAT_API_TOKEN"),
     )
