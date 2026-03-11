@@ -1,17 +1,20 @@
 """Application fixtures for pytest."""
 
 import json
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Browser, BrowserContext, Page, expect
 
 from src.web.application import Application
+from tests.conftest import TEST_RESULT_DIR
 from tests.fixtures.config import Config
-from tests.fixtures.cookie_helper import CookieHelper
+from tests.fixtures.cookie_helper import CookieHelper, save_storage_state
 
 STORAGE_STATE_PATH = Path("test-result/.auth/storage_state.json")
 FREE_PROJECT_STORAGE_STATE_PATH = Path("test-result/.auth/free_project_state.json")
+TRACES_DIR = TEST_RESULT_DIR / "traces"
 
 
 # =============================================================================
@@ -19,23 +22,32 @@ FREE_PROJECT_STORAGE_STATE_PATH = Path("test-result/.auth/free_project_state.jso
 # =============================================================================
 
 
-def build_browser_context(
+def get_or_create_context(
     browser: Browser,
     base_url: str,
-    storage_state: Path | None = None,
-) -> BrowserContext:
-    """Build a browser context with standard settings."""
-    kwargs = {
+    storage_path: Path | None = None,
+) -> tuple[BrowserContext, bool]:
+    """Create a browser context, optionally restoring state from *storage_path*.
+
+    Returns:
+        A tuple of (context, needs_login) where *needs_login* is ``True``
+        when no saved state was loaded.
+    """
+    has_state = storage_path is not None and storage_path.exists()
+
+    kwargs: dict = {
         "base_url": base_url,
         "viewport": {"width": 1920, "height": 1080},
         "locale": "uk-UA",
         "timezone_id": "Europe/Kyiv",
-        "record_video_dir": "test-result/videos/",
+        "record_video_dir": str(TEST_RESULT_DIR / "videos"),
         "permissions": ["geolocation"],
     }
-    if storage_state and storage_state.exists():
-        kwargs["storage_state"] = str(storage_state)
-    return browser.new_context(**kwargs)
+    if has_state:
+        kwargs["storage_state"] = str(storage_path)
+
+    context = browser.new_context(**kwargs)
+    return context, not has_state
 
 
 # =============================================================================
@@ -44,9 +56,9 @@ def build_browser_context(
 
 
 @pytest.fixture(scope="function")
-def app(browser: Browser, configs: Config) -> Application:
+def app(browser: Browser, configs: Config) -> Generator[Application]:
     """Clean app instance - new page for each test."""
-    context = build_browser_context(browser, configs.base_url)
+    context, _ = get_or_create_context(browser, configs.app_base_url)
     page = context.new_page()
     yield Application(page)
     page.close()
@@ -58,13 +70,7 @@ def app(browser: Browser, configs: Config) -> Application:
 # =============================================================================
 
 
-def _save_free_project_storage_state() -> None:
-    """
-    Create free project storage state by copying storage state with empty company_id.
-
-    This creates a storage state file that can be used for tests that require
-    a logged-in user without any company/project context.
-    """
+def create_free_project_state() -> None:
     if not STORAGE_STATE_PATH.exists():
         return
 
@@ -79,40 +85,28 @@ def _save_free_project_storage_state() -> None:
 
 
 @pytest.fixture(scope="session")
-def logged_page(browser: Browser, configs: Config) -> Page:
-    """
-    Session-scoped page with saved login state.
-
-    Optimization: Tries to restore session from cached cookies first,
-    only performs full login if cached session is invalid or missing.
-    """
-    if STORAGE_STATE_PATH.exists():
-        context = build_browser_context(browser, configs.base_url, storage_state=STORAGE_STATE_PATH)
-        yield context.new_page()
-        context.close()
-        return
-
-    context = build_browser_context(browser, configs.base_url)
+def logged_page(browser: Browser, configs: Config) -> Generator[Page]:
+    """Session-scoped page with login - reuses auth state via storage."""
+    context, needs_login = get_or_create_context(browser, configs.app_base_url, STORAGE_STATE_PATH)
     page = context.new_page()
-    app = Application(page)
-    app.login_page.open()
-    app.login_page.is_loaded()
-    app.login_page.login_user(configs.email, configs.password)
 
-    STORAGE_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    context.storage_state(path=STORAGE_STATE_PATH)
-    _save_free_project_storage_state()
+    if needs_login:
+        open_login_and_authorize(configs, page)
+        save_storage_state(context, STORAGE_STATE_PATH)
+        create_free_project_state()
 
     yield page
     context.close()
 
 
 @pytest.fixture(scope="function")
-def logged_app(logged_page: Page) -> Application:
-    """App instance with pre-authenticated user."""
+def logged_app(logged_page: Page, request: pytest.FixtureRequest) -> Generator[Application]:
+    start_tracing(logged_page)
     logged_page.goto("/projects")
+
     yield Application(logged_page)
-    logged_page.close()
+
+    stop_tracing_on_failure(logged_page, request)
 
 
 # =============================================================================
@@ -121,45 +115,46 @@ def logged_app(logged_page: Page) -> Application:
 
 
 @pytest.fixture(scope="session")
-def free_project_page(browser: Browser, configs: Config) -> Page:
-    """
-    Session-scoped page authenticated in the Free Projects company context.
-
-    Uses the free project storage state if available, otherwise logs in and
-    selects the 'Free Projects' company via the UI.
-    Opens only one browser window regardless of other session fixtures.
-    """
-    if FREE_PROJECT_STORAGE_STATE_PATH.exists():
-        context = build_browser_context(browser, configs.base_url, storage_state=FREE_PROJECT_STORAGE_STATE_PATH)
-        yield context.new_page()
-        context.close()
-        return
-
-    context = build_browser_context(browser, configs.base_url)
+def free_project_page(browser: Browser, configs: Config) -> Generator[Page]:
+    """Session-scoped page in the Free Projects company context."""
+    context, needs_login = get_or_create_context(
+        browser,
+        configs.app_base_url,
+        FREE_PROJECT_STORAGE_STATE_PATH,
+    )
     page = context.new_page()
-    app = Application(page)
-    app.login_page.open()
-    app.login_page.is_loaded()
-    app.login_page.login_user(configs.email, configs.password)
 
-    app.projects_page.is_loaded()
-    app.projects_page.open()
-    app.projects_page.header.select_company("Free Projects")
-    expect(app.projects_page.header.free_plan_label).to_be_visible()
+    if needs_login:
+        app = open_login_and_authorize(configs, page)
 
-    FREE_PROJECT_STORAGE_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    context.storage_state(path=FREE_PROJECT_STORAGE_STATE_PATH)
+        app.projects_page.is_loaded()
+        app.projects_page.open()
+        app.projects_page.header.select_company("Free Projects")
+        expect(app.projects_page.header.free_plan_label).to_be_visible()
+
+        save_storage_state(context, FREE_PROJECT_STORAGE_STATE_PATH)
 
     yield page
     context.close()
 
 
+def open_login_and_authorize(configs: Config, page: Page) -> Application:
+    app = Application(page)
+    app.login_page.open()
+    app.login_page.is_loaded()
+    app.login_page.login_user(configs.email, configs.password)
+    return app
+
+
 @pytest.fixture(scope="function")
-def free_project_app(free_project_page: Page) -> Application:
+def free_project_app(free_project_page: Page, request: pytest.FixtureRequest) -> Generator[Application]:
     """App instance authenticated in the Free Projects company context."""
+    start_tracing(free_project_page)
     free_project_page.goto("/projects")
+
     yield Application(free_project_page)
-    free_project_page.close()
+
+    stop_tracing_on_failure(free_project_page, request)
 
 
 # =============================================================================
@@ -179,9 +174,9 @@ def reused_app(reused_page: Page) -> Application:
 
 
 @pytest.fixture(scope="module")
-def shared_browser(browser: Browser, configs: Config) -> Page:
+def shared_browser(browser: Browser, configs: Config) -> Generator[Page]:
     """Shared page for parametrized tests (module scope) - reuses same page across test params."""
-    context = build_browser_context(browser, configs.base_url)
+    context, _ = get_or_create_context(browser, configs.app_base_url)
     page = context.new_page()
     yield page
     page.close()
@@ -189,13 +184,13 @@ def shared_browser(browser: Browser, configs: Config) -> Page:
 
 
 @pytest.fixture(scope="function")
-def shared_page(shared_browser: Page) -> Application:
+def shared_page(shared_browser: Page) -> Generator[Application]:
     """Shared page with state clearing between tests."""
     yield Application(shared_browser)
 
 
 @pytest.fixture(scope="module")
-def persistent_login_page(reused_context: BrowserContext) -> Page:
+def persistent_login_page(reused_context: BrowserContext) -> Generator[Page]:
     """Module-scoped page - keeps the same page for all tests in module."""
     pg = reused_context.new_page()
     yield pg
@@ -271,3 +266,19 @@ def ensure_authenticated(app: Application, configs: Config) -> None:
     app.home_page.click_login()
     app.login_page.login_user(configs.email, configs.password)
     app.projects_page.is_loaded()
+
+
+def start_tracing(page: Page) -> None:
+    """Start tracing on the browser context."""
+    page.context.tracing.start(screenshots=True, snapshots=True, sources=True)
+
+
+def stop_tracing_on_failure(page: Page, request: pytest.FixtureRequest) -> None:
+    """Stop tracing; save trace file only when the test has failed."""
+    failed = hasattr(request.node, "rep_call") and request.node.rep_call.failed
+    if failed:
+        trace_path = TRACES_DIR / f"trace-{request.node.name}.zip"
+        trace_path.parent.mkdir(parents=True, exist_ok=True)
+        page.context.tracing.stop(path=str(trace_path))
+    else:
+        page.context.tracing.stop()
