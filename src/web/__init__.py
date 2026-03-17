@@ -3,4 +3,4 @@
 from src.web.application import Application
 from src.web.constants import Timeouts, Urls
 
-__all__ = ["Application", "Urls", "Timeouts"]
+__all__ = ["application.py", "Urls", "Timeouts"]
