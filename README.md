@@ -62,6 +62,14 @@ uv run pytest -m slow        # Tests that take longer to execute
 uv run pytest --headless
 ```
 
+### Selenium tests (real browser)
+
+```powershell
+python -m pytest tests/web/selenium/login_page_selenium_test.py -m selenium --selenium-headed -v
+```
+
+Selenium login tests use `APP_URL`, `EMAIL`, and `PASSWORD` from `.env`.
+
 ## Development
 
 ### Linting

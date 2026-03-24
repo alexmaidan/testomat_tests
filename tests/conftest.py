@@ -6,6 +6,23 @@ PROJECT_ROOT = Path(__file__).parent.parent
 TEST_RESULT_DIR = PROJECT_ROOT / "test-result"
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Add Selenium-specific execution mode flags."""
+    group = parser.getgroup("selenium")
+    group.addoption(
+        "--selenium-headed",
+        action="store_true",
+        default=False,
+        help="Run Selenium tests in headed mode (show browser window).",
+    )
+    group.addoption(
+        "--selenium-headless",
+        action="store_true",
+        default=False,
+        help="Run Selenium tests in headless mode.",
+    )
+
+
 def pytest_configure(config: pytest.Config) -> None:
     """Configure pytest settings and custom markers."""
     if config.option.htmlpath:
@@ -26,6 +43,7 @@ def pytest_runtest_makereport(item: pytest.Item, call) -> None:
 pytest_plugins = [
     "tests.fixtures.config",
     "tests.fixtures.playwright",
+    "tests.fixtures.selenium",
     "tests.fixtures.app",
     "tests.fixtures.api",
 ]
