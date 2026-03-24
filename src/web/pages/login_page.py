@@ -22,7 +22,7 @@ class LoginPage(BasePage):
         self._password_input = page.locator("#content-desktop #user_password")
         self._remember_me = page.locator("#user_remember_me")
         self._sign_in_button = page.get_by_role("button", name="Sign in")
-        self._error_message = page.locator("#content-desktop").get_by_text("Invalid Email or password.")
+        self._error_message = page.locator("#content-desktop").get_by_text("Invalid email or password.")
 
     def is_loaded(self) -> Self:
         """Assert that the login page is fully loaded.
